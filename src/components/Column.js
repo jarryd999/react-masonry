@@ -1,14 +1,16 @@
 import React from 'react';
+import Tile from './Tile.js';
 
 export default function Column({images, onTileClick}) {
+
 	return (
 		<ul className='masonry-column'>
-			{images.map( image => 
+			{images.map(image =>
 				<Tile
 					key={image.id}
-					imgSrc={image.image_url}
+					imgSrc={image.url}
 					imgName={image.name}
-					viewCount={image.times_viewed}
+					viewCount={image.views}
 					onClick={e => onTileClick(item)}
 				/>
 			)}

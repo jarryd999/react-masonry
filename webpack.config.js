@@ -1,6 +1,6 @@
 var webpack = require('webpack');
 var HtmlWebpackPlugin = require('html-webpack-plugin');
-var ExtractTextPlugin = require("extract-text-webpack-plugin");
+var ExtractTextPlugin = require('extract-text-webpack-plugin');
 
 module.exports = {
     entry: './src/index.js',
@@ -11,7 +11,7 @@ module.exports = {
     module: {
         loaders: [
             { test: /\.js$/, exclude: /node_modules/, loader: 'babel-loader' },
-            { test: /\.scss/,exclude: /node_modules/, loader: ExtractTextPlugin.extract("style-loader", "css-loader!sass-loader") }
+            { test: /\.scss$/, excluse: /node_modules/, loader: ExtractTextPlugin.extract("style-loader", "css-loader!sass-loader") },
         ]
     },
     plugins: [

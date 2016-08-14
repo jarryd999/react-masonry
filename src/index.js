@@ -9,6 +9,8 @@ import { App } from './components';
 import { ColumnOuterContainer } from './containers';
 import { initializeSDK } from './actions';
 
+import './index.scss';
+
 const store = createStore(
 	combineReducers(reducers),
 	applyMiddleware(thunkMiddleware)

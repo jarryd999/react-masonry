@@ -1,4 +1,5 @@
-import '../actionTypes.js';
+import {TOGGLE_FAVORITE, INCREMENT_FAVORITE_COUNT, DECREMENT_FAVORITE_COUNT, REQUEST_IMAGES, RECEIVE_IMAGES, RERENDER_COLUMNS} from '../constants/actionTypes.js';
+import { API_BASE, POPULAR } from '../constants/requests.js';
 
 export function toggleFavorite(image){
 	return {
@@ -28,8 +29,7 @@ export function requestImages(){
 export function fetchImages(pageNum){
 	return dispatch => {
 		dispatch(requestImages());
-		return fetch('https://api.500px.com/v1/photos?feature=popular&sort=created_at&page=' + 
-			pageNum + '&image_size=1&include_store=store_download&include_states=voted')
+		return fetch(API_BASE + POPULAR + pageNum)
 			.then(response => response.json())
 			.then(json => {
 				dispatch(receiveFilters(images));

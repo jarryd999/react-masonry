@@ -1,9 +1,14 @@
-import {REQUEST_IMAGES, RECEIVE_IMAGES, RERENDER_COLUMNS} from '../constants/actionTypes.js';
+import { REQUEST_IMAGES, RECEIVE_IMAGES, RERENDER_COLUMNS, ADD_IMAGES, SET_COLUMN_COUNT } from '../constants/actionTypes.js';
 
 const INITIAL_IMAGES = {
-	images: null,
-	imageCount: 0,
+	images: [],
 	isFetching: false
+};
+
+const INITIAL_COLUMNS = {
+	columnImages: [[],[],[]],
+	columnCount: 3,
+	columnHeights: [[0],[0],[0]]
 };
 
 export function imageState(state = INITIAL_IMAGES, action) {
@@ -14,28 +19,42 @@ export function imageState(state = INITIAL_IMAGES, action) {
 		case RECEIVE_IMAGES:
 			return Object.assign({}, state, {
 				isFetching: false,
-				images: Object.assign({}, state.images, action.data)
+				images: action.data
 			});
 
-		case RERENDER_COLUMNS:
-			let columns = [];
-			let columnCount = action.data;
-			let currColumn = 0;
+		default:
+			return state
+	}
+}
 
-			for (var i = 0; i < columnCount; i++){
-				columns[i] = {
-					height: 0, image_ids: null
-				};
-			}
+export function columnState(state = INITIAL_COLUMNS, action) {
+	switch (action.type) {
+		case ADD_IMAGES:
 
-			for (var i = 0; i < state.images.length; i++){
-				for (var j = 0; j < columnCount - 1; j++){
-					shortestColumn = columns[j]	
+			let images = action.data;
+			let newState = Object.assign({}, state);
+
+			for (let index = 0; index < images.length; index++){
+				let image = images[index];
+				// Identify the column with the most room to add an image
+				// and stick the new image in there
+				let smallestColumn = { height: state.columnHeights[0], columnId: 0 };
+				for (let i = 1; i < state.columnCount; i++) {
+					if ( smallestColumn.height > state.columnHeights[i] ) {
+						smallestColumn.height = state.columnHeights[i];
+						smallestColumn.columnId = i;
+					}
 				}
-				
-				columns[currColumn].push(state.images[i].id);
+
+				// create the new state object, add the image id to it's image list
+				// and increase it's height tracker
+				newState.columnImages[smallestColumn.columnId].push(index);
+				newState.columnHeights[smallestColumn.columnId] = parseFloat(newState.columnHeights[smallestColumn.columnId]) + parseFloat(image.heightIndex);
 			}
-			return columns;
+			return newState
+
+		case SET_COLUMN_COUNT:
+			return Object.assign({}, state, {columnCount: action.data})
 
 		default:
 			return state

@@ -1,5 +1,22 @@
-import {TOGGLE_FAVORITE, INCREMENT_FAVORITE_COUNT, DECREMENT_FAVORITE_COUNT, REQUEST_IMAGES, RECEIVE_IMAGES, RERENDER_COLUMNS} from '../constants/actionTypes.js';
-import { API_BASE, POPULAR } from '../constants/requests.js';
+import { TOGGLE_FAVORITE, INCREMENT_FAVORITE_COUNT, DECREMENT_FAVORITE_COUNT, REQUEST_IMAGES, RECEIVE_IMAGES, RERENDER_COLUMNS, ADD_IMAGES, SET_COLUMN_COUNT } from '../constants/actionTypes.js';
+import { API_FEATURE, SDK_KEY } from '../constants/requests.js';
+import '../500px.js';
+
+export function initializeSDK(){
+	return dispatch => {
+		_500px.init({
+		    sdk_key: SDK_KEY
+		});
+
+		_500px.getAuthorizationStatus(function (status) {
+		    if (status == 'not_logged_in' || status == 'not_authorized') {
+		        _500px.login();
+		    }
+		});
+
+		dispatch(fetchImages());
+	}
+}
 
 export function toggleFavorite(image){
 	return {
@@ -29,11 +46,18 @@ export function requestImages(){
 export function fetchImages(pageNum){
 	return dispatch => {
 		dispatch(requestImages());
-		return fetch(API_BASE + POPULAR + pageNum)
-			.then(response => response.json())
-			.then(json => {
-				dispatch(receiveFilters(images));
-		})
+		_500px.api('/photos', {feature: API_FEATURE, page: pageNum }, (response) => {
+			let images = response.data.photos.map( image => {
+				return { 
+					url: image.image_url,
+				 	views: image.times_viewed, 
+				 	id: image.id,
+				 	heightIndex: image.height / image.width
+				}
+			});
+			dispatch(receiveImages(images));
+			dispatch(addImages(images));
+		});
 	}
 }
 
@@ -44,9 +68,23 @@ export function receiveImages(images){
 	}
 }
 
+export function setColumnCount(columnCount) {
+	return {
+		type: SET_COLUMN_COUNT,
+		data: columnCount
+	}
+}
+
 export function rerenderColumns(columnCount) {
 	return {
 		type: RERENDER_COLUMNS,
 		data: columnCount
+	}
+}
+
+export function addImages(images) {
+	return {
+		type: ADD_IMAGES,
+		data: images
 	}
 }

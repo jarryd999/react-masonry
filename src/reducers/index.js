@@ -1,4 +1,4 @@
-import {REQUEST_IMAGES, RECEIVE_IMAGES, RERENDER_COLUMNS} from '../actionTypes.js';
+import {REQUEST_IMAGES, RECEIVE_IMAGES, RERENDER_COLUMNS} from '../constants/actionTypes.js';
 
 const INITIAL_IMAGES = {
 	images: null,

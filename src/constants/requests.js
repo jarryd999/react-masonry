@@ -1,2 +1,2 @@
-export default const API_BASE = 'https://api.500px.com/v1/'
-export default const POPULAR = 'photos?feature=popular&sort=created_at&image_size=1&page='
+export const API_FEATURE = 'popular';
+export const SDK_KEY = 'f6464424ffcd37fbc0119bfc0119d7b34eaa622b';

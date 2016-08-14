@@ -4,27 +4,22 @@ import { createStore, combineReducers, applyMiddleware } from 'redux';
 import { Provider } from 'react-redux';
 import thunkMiddleware from 'redux-thunk';  
 import * as reducers from './reducers/index.js';
-import './500px.js';
 
-import { App, Tile } from './components';
-
-
-
-_500px.init({
-    sdk_key: 'f6464424ffcd37fbc0119bfc0119d7b34eaa622b'
-  });
-
-_500px.login();
+import { App } from './components';
+import { ColumnOuterContainer } from './containers';
+import { initializeSDK } from './actions';
 
 const store = createStore(
 	combineReducers(reducers),
 	applyMiddleware(thunkMiddleware)
 );
 
+store.dispatch(initializeSDK());
+
 ReactDOM.render(
     <Provider store={store}>
         <App >
-            <Tile/>
+            <ColumnOuterContainer/>
         </App>
     </Provider>,
     document.getElementById('root')

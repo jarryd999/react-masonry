@@ -7,7 +7,7 @@ export default function ColumnOuter({columnCount}) {
 		columns.push(<ActiveColumn key={i} columnId={i}/>);
 	}
 	return (
-		<div>
+		<div id='column-outer'>
 			{columns}
 		</div>
 	);

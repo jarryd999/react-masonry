@@ -61,7 +61,8 @@ export function fetchImages(){
 				 	views: image.times_viewed, 
 				 	id: null,
 				 	heightIndex: image.height / image.width,
-				 	favorite: false
+				 	favorite: false,
+				 	loaded: false
 				}
 			});
 			dispatch(receiveImages(images));

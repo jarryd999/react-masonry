@@ -10,6 +10,7 @@ export default function Column({images, onTileClick}) {
 					key={image.id}
 					imgSrc={image.url}
 					favorite={image.favorite}
+					imgLoaded={image.loaded}
 					viewCount={image.views}
 					onClick={e => onTileClick(image)}
 				/>

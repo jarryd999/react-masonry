@@ -82,15 +82,42 @@
 
 	store.dispatch((0, _actions.initializeSDK)());
 
+	determineColumnCount(store);
+
+	window.onresize = determineColumnCount;
+	window.onscroll = infiniteScrollLoader;
+
 	_reactDom2.default.render(_react2.default.createElement(
-	    _reactRedux.Provider,
-	    { store: store },
-	    _react2.default.createElement(
-	        _components.App,
-	        null,
-	        _react2.default.createElement(_containers.ColumnOuterContainer, null)
-	    )
+	  _reactRedux.Provider,
+	  { store: store },
+	  _react2.default.createElement(
+	    _components.App,
+	    null,
+	    _react2.default.createElement(_containers.TopbarContainer, null),
+	    _react2.default.createElement(_containers.ColumnOuterContainer, null)
+	  )
 	), document.getElementById('root'));
+
+	// Helper functions for window events
+
+	function determineColumnCount() {
+	  if (window.innerWidth <= 800) store.dispatch((0, _actions.setColumnCount)(2));else store.dispatch((0, _actions.setColumnCount)(3));
+
+	  store.dispatch((0, _actions.addImages)(store.getState().imageState.images));
+	}
+
+	function infiniteScrollLoader() {
+	  if (getScrollPercent() >= 95 && !store.getState().imageState.isFetching) {
+	    store.dispatch((0, _actions.fetchImages)());
+	  }
+	}
+	function getScrollPercent() {
+	  var h = document.documentElement,
+	      b = document.body,
+	      st = 'scrollTop',
+	      sh = 'scrollHeight';
+	  return h[st] || b[st] / ((h[sh] || b[sh]) - h.clientHeight) * 100;
+	}
 
 /***/ },
 /* 1 */
@@ -23100,18 +23127,26 @@
 	});
 	exports.imageState = imageState;
 	exports.columnState = columnState;
+	exports.topbarState = topbarState;
 
 	var _actionTypes = __webpack_require__(200);
 
+	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
 	var INITIAL_IMAGES = {
 		images: [],
-		isFetching: false
+		isFetching: false,
+		pageNum: 1
 	};
 
 	var INITIAL_COLUMNS = {
 		columnImages: [[], [], []],
 		columnCount: 3,
 		columnHeights: [[0], [0], [0]]
+	};
+
+	var INITIAL_TOPBAR = {
+		favoriteCount: 0
 	};
 
 	function imageState() {
@@ -23124,15 +23159,17 @@
 
 			case _actionTypes.RECEIVE_IMAGES:
 				return Object.assign({}, state, {
+					pageNum: state.pageNum + 1,
 					isFetching: false,
-					images: action.data
+					images: [].concat(_toConsumableArray(state.images), _toConsumableArray(action.data))
 				});
 
-			case TOGGLE_FAVORITE:
+			case _actionTypes.TOGGLE_FAVORITE:
 				return Object.assign({}, state, { images: state.images.map(function (image) {
-						if (image.id == action.data) {
+						if (image == action.data) {
 							image.favorite = !image.favorite;
 						}
+						return image;
 					}) });
 			default:
 				return state;
@@ -23147,17 +23184,25 @@
 			case _actionTypes.ADD_IMAGES:
 
 				var images = action.data;
-				var newState = Object.assign({}, state);
+				var newImages = [[]];
+				var newHeights = [[0]];
+				for (var i = 0; i < state.columnCount; i++) {
+					newImages.push([]);
+					newHeights.push([0]);
+				}
+
+				// create a new state object to build from scratch
+				var newState = { columnCount: state.columnCount, columnImages: newImages, columnHeights: newHeights };
 
 				for (var index = 0; index < images.length; index++) {
 					var image = images[index];
 					// Identify the column with the most room to add an image
 					// and stick the new image in there
-					var smallestColumn = { height: state.columnHeights[0], columnId: 0 };
-					for (var i = 1; i < state.columnCount; i++) {
-						if (smallestColumn.height > state.columnHeights[i]) {
-							smallestColumn.height = state.columnHeights[i];
-							smallestColumn.columnId = i;
+					var smallestColumn = { height: newState.columnHeights[0], columnId: 0 };
+					for (var _i = 1; _i < state.columnCount; _i++) {
+						if (smallestColumn.height > newState.columnHeights[_i]) {
+							smallestColumn.height = newState.columnHeights[_i];
+							smallestColumn.columnId = _i;
 						}
 					}
 
@@ -23171,6 +23216,21 @@
 			case _actionTypes.SET_COLUMN_COUNT:
 				return Object.assign({}, state, { columnCount: action.data });
 
+			default:
+				return state;
+		}
+	}
+
+	function topbarState() {
+		var state = arguments.length <= 0 || arguments[0] === undefined ? INITIAL_TOPBAR : arguments[0];
+		var action = arguments[1];
+
+		switch (action.type) {
+			case _actionTypes.INCREMENT_FAVORITE_COUNT:
+				return { favoriteCount: state.favoriteCount + 1 };
+
+			case _actionTypes.DECREMENT_FAVORITE_COUNT:
+				return { favoriteCount: state.favoriteCount - 1 };
 			default:
 				return state;
 		}
@@ -23265,12 +23325,13 @@
 /* 203 */
 /***/ function(module, exports, __webpack_require__) {
 
-	'use strict';
+	"use strict";
 
 	Object.defineProperty(exports, "__esModule", {
 		value: true
 	});
-	exports.default = undefined;
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 	var _react = __webpack_require__(1);
 
@@ -23278,23 +23339,59 @@
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-	function Tile(_ref) {
-		var viewCount = _ref.viewCount;
-		var favorited = _ref.favorited;
-		var imgSrc = _ref.imgSrc;
-		var imgName = _ref.imgName;
-		var _onClick = _ref.onClick;
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-		var className = favorited ? "tile-favorite" : null;
-		return _react2.default.createElement(
-			'li',
-			{ className: className, onClick: function onClick(e) {
-					return _onClick(e);
-				} },
-			_react2.default.createElement('img', { src: imgSrc, width: '100%' }),
-			imgName
-		);
-	}
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+	var Tile = function (_React$Component) {
+		_inherits(Tile, _React$Component);
+
+		function Tile(props) {
+			_classCallCheck(this, Tile);
+
+			var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Tile).call(this, props));
+
+			_this.state = { loaded: _this.props.loaded };
+			return _this;
+		}
+
+		_createClass(Tile, [{
+			key: "render",
+			value: function render() {
+				var _this2 = this;
+
+				var className = this.props.favorite ? "tile tile-favorite" : "tile";
+				var loaded = this.state.loaded;
+				if (loaded) className += " loaded";
+
+				return _react2.default.createElement(
+					"li",
+					{ className: className, onClick: function onClick(e) {
+							return _this2.props.onClick(e);
+						} },
+					_react2.default.createElement("img", { src: this.props.imgSrc, width: "100%", onLoad: function onLoad() {
+							return _this2.setState({ loaded: true });
+						} }),
+					_react2.default.createElement(
+						"div",
+						{ className: "overlay" },
+						"Views: ",
+						this.props.viewCount,
+						_react2.default.createElement(
+							"div",
+							null,
+							"Click to toggle favorite"
+						)
+					)
+				);
+			}
+		}]);
+
+		return Tile;
+	}(_react2.default.Component);
+
 	exports.default = Tile;
 
 /***/ },
@@ -23319,10 +23416,11 @@
 
 		return _react2.default.createElement(
 			'div',
-			null,
+			{ id: 'nav' },
 			_react2.default.createElement(
 				'span',
 				{ id: 'favoriteCount' },
+				'Photos Favorited: ',
 				favoriteCount
 			)
 		);
@@ -23361,7 +23459,8 @@
 				return _react2.default.createElement(_Tile2.default, {
 					key: image.id,
 					imgSrc: image.url,
-					imgName: image.name,
+					favorite: image.favorite,
+					imgLoaded: image.loaded,
 					viewCount: image.views,
 					onClick: function onClick(e) {
 						return onTileClick(image);
@@ -23401,7 +23500,7 @@
 		}
 		return _react2.default.createElement(
 			'div',
-			null,
+			{ id: 'column-outer' },
 			columns
 		);
 	}
@@ -23420,16 +23519,13 @@
 
 	var _Column2 = _interopRequireDefault(_Column);
 
-	var _actions = __webpack_require__(208);
-
-	var _actions2 = _interopRequireDefault(_actions);
+	var _index = __webpack_require__(208);
 
 	var _reactRedux = __webpack_require__(189);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	var mapStateToProps = function mapStateToProps(state, ownProps) {
-
 		return {
 			images: state.columnState.columnImages[ownProps.columnId].map(function (imageId) {
 				state.imageState.images[imageId].id = imageId;return state.imageState.images[imageId];
@@ -23440,7 +23536,8 @@
 	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
 		return {
 			onTileClick: function onTileClick(image) {
-				dispatch((0, _actions2.default)(image));
+				dispatch((0, _index.toggleFavorite)(image));
+				if (image.favorite) dispatch((0, _index.incrementFavoriteCount)());else dispatch((0, _index.decrementFavoriteCount)());
 			}
 		};
 	};
@@ -23515,21 +23612,30 @@
 		};
 	}
 
-	function fetchImages(pageNum) {
-		return function (dispatch) {
+	function fetchImages() {
+		return function (dispatch, getState) {
+			var pageNum = getState().imageState.pageNum;
+
 			dispatch(requestImages());
-			_500px.api('/photos', { feature: _requests.API_FEATURE, page: pageNum }, function (response) {
+			_500px.api('/photos', { feature: _requests.API_FEATURE, page: pageNum, image_size: '4' }, function (response) {
+
+				// report error if unable to load pictures
+				if (response.error) {
+					alert("Error: " + response.error_message);
+					return;
+				}
 				var images = response.data.photos.map(function (image) {
 					return {
 						url: image.image_url,
 						views: image.times_viewed,
-						id: id,
+						id: null,
 						heightIndex: image.height / image.width,
-						favorite: false
+						favorite: false,
+						loaded: false
 					};
 				});
 				dispatch(receiveImages(images));
-				dispatch(addImages(images));
+				dispatch(addImages(getState().imageState.images));
 			});
 		};
 	}
@@ -24063,11 +24169,11 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.ColumnOuterContainer = exports.ActiveColumn = exports.TileContainer = undefined;
+	exports.ColumnOuterContainer = exports.ActiveColumn = exports.TopbarContainer = undefined;
 
-	var _TileContainer = __webpack_require__(212);
+	var _TopbarContainer = __webpack_require__(212);
 
-	var _TileContainer2 = _interopRequireDefault(_TileContainer);
+	var _TopbarContainer2 = _interopRequireDefault(_TopbarContainer);
 
 	var _ActiveColumn = __webpack_require__(207);
 
@@ -24079,7 +24185,7 @@
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-	exports.TileContainer = _TileContainer2.default;
+	exports.TopbarContainer = _TopbarContainer2.default;
 	exports.ActiveColumn = _ActiveColumn2.default;
 	exports.ColumnOuterContainer = _ColumnOuterContainer2.default;
 
@@ -24089,7 +24195,21 @@
 
 	'use strict';
 
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+
 	var _reactRedux = __webpack_require__(189);
+
+	var _components = __webpack_require__(201);
+
+	var mapStateToProps = function mapStateToProps(state) {
+		return { favoriteCount: state.topbarState.favoriteCount };
+	};
+
+	var TopbarContainer = (0, _reactRedux.connect)(mapStateToProps)(_components.TopBar);
+
+	exports.default = TopbarContainer;
 
 /***/ },
 /* 213 */

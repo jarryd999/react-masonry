@@ -1,5 +1,5 @@
 # react-masonry
-###A React masonry layout
+A React masonry layout
 
 
 ##Installation

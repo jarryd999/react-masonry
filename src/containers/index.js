@@ -1,5 +1,5 @@
-import TileContainer from './TileContainer.js';
+import TopbarContainer from './TopbarContainer.js';
 import ActiveColumn from './ActiveColumn.js';
 import ColumnOuterContainer from './ColumnOuterContainer.js';
 
-export { TileContainer, ActiveColumn, ColumnOuterContainer };
+export { TopbarContainer, ActiveColumn, ColumnOuterContainer };

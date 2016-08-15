@@ -1,11 +1,11 @@
 import React from 'react'
 
-export default function Tile({viewCount, favorited, imgSrc, imgName, onClick}) {
-	let className = favorited ? "tile-favorite" : null;
+export default function Tile({viewCount, favorite, imgSrc, onClick}) {
+	let className = favorite ? "tile tile-favorite" : "tile";
 	return (
 		<li className={className} onClick={e => onClick(e)}>
 			<img src={imgSrc} width='100%'/>
-			{imgName}
+			<span>Views: {viewCount}</span>
 		</li>
 	)
 }

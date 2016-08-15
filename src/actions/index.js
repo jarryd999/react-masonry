@@ -43,20 +43,29 @@ export function requestImages(){
 	}
 }
 
-export function fetchImages(pageNum){
-	return dispatch => {
+export function fetchImages(){
+	return (dispatch, getState) => {
+		let pageNum = getState().imageState.pageNum;
+
 		dispatch(requestImages());
-		_500px.api('/photos', {feature: API_FEATURE, page: pageNum }, (response) => {
+		_500px.api('/photos', {feature: API_FEATURE, page: pageNum, image_size: '4' }, (response) => {
+
+			// report error if unable to load pictures
+			if (response.error){
+				alert("Error: " + response.error_message);
+				return;
+			}
 			let images = response.data.photos.map( image => {
 				return { 
 					url: image.image_url,
 				 	views: image.times_viewed, 
-				 	id: image.id,
-				 	heightIndex: image.height / image.width
+				 	id: null,
+				 	heightIndex: image.height / image.width,
+				 	favorite: false
 				}
 			});
 			dispatch(receiveImages(images));
-			dispatch(addImages(images));
+			dispatch(addImages(getState().imageState.images));
 		});
 	}
 }

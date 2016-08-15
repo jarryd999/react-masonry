@@ -68,13 +68,19 @@
 
 	var _components = __webpack_require__(201);
 
+	var _containers = __webpack_require__(211);
+
+	var _actions = __webpack_require__(208);
+
+	__webpack_require__(214);
+
 	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	var store = (0, _redux.createStore)((0, _redux.combineReducers)(reducers), (0, _redux.applyMiddleware)(_reduxThunk2.default));
 
-	store.dispatch(initializeSDK());
+	store.dispatch((0, _actions.initializeSDK)());
 
 	_reactDom2.default.render(_react2.default.createElement(
 	    _reactRedux.Provider,
@@ -82,7 +88,7 @@
 	    _react2.default.createElement(
 	        _components.App,
 	        null,
-	        _react2.default.createElement(_components.Tile, null)
+	        _react2.default.createElement(_containers.ColumnOuterContainer, null)
 	    )
 	), document.getElementById('root'));
 
@@ -23093,13 +23099,19 @@
 		value: true
 	});
 	exports.imageState = imageState;
+	exports.columnState = columnState;
 
 	var _actionTypes = __webpack_require__(200);
 
 	var INITIAL_IMAGES = {
-		images: null,
-		imageCount: 0,
+		images: [],
 		isFetching: false
+	};
+
+	var INITIAL_COLUMNS = {
+		columnImages: [[], [], []],
+		columnCount: 3,
+		columnHeights: [[0], [0], [0]]
 	};
 
 	function imageState() {
@@ -23113,28 +23125,51 @@
 			case _actionTypes.RECEIVE_IMAGES:
 				return Object.assign({}, state, {
 					isFetching: false,
-					images: Object.assign({}, state.images, action.data)
+					images: action.data
 				});
 
-			case _actionTypes.RERENDER_COLUMNS:
-				var columns = [];
-				var columnCount = action.data;
-				var currColumn = 0;
+			case TOGGLE_FAVORITE:
+				return Object.assign({}, state, { images: state.images.map(function (image) {
+						if (image.id == action.data) {
+							image.favorite = !image.favorite;
+						}
+					}) });
+			default:
+				return state;
+		}
+	}
 
-				for (var i = 0; i < columnCount; i++) {
-					columns[i] = {
-						height: 0, image_ids: null
-					};
-				}
+	function columnState() {
+		var state = arguments.length <= 0 || arguments[0] === undefined ? INITIAL_COLUMNS : arguments[0];
+		var action = arguments[1];
 
-				for (var i = 0; i < state.images.length; i++) {
-					for (var j = 0; j < columnCount - 1; j++) {
-						shortestColumn = columns[j];
+		switch (action.type) {
+			case _actionTypes.ADD_IMAGES:
+
+				var images = action.data;
+				var newState = Object.assign({}, state);
+
+				for (var index = 0; index < images.length; index++) {
+					var image = images[index];
+					// Identify the column with the most room to add an image
+					// and stick the new image in there
+					var smallestColumn = { height: state.columnHeights[0], columnId: 0 };
+					for (var i = 1; i < state.columnCount; i++) {
+						if (smallestColumn.height > state.columnHeights[i]) {
+							smallestColumn.height = state.columnHeights[i];
+							smallestColumn.columnId = i;
+						}
 					}
 
-					columns[currColumn].push(state.images[i].id);
+					// create the new state object, add the image id to it's image list
+					// and increase it's height tracker
+					newState.columnImages[smallestColumn.columnId].push(index);
+					newState.columnHeights[smallestColumn.columnId] = parseFloat(newState.columnHeights[smallestColumn.columnId]) + parseFloat(image.heightIndex);
 				}
-				return columns;
+				return newState;
+
+			case _actionTypes.SET_COLUMN_COUNT:
+				return Object.assign({}, state, { columnCount: action.data });
 
 			default:
 				return state;
@@ -23157,6 +23192,8 @@
 	var FETCH_IMAGES = exports.FETCH_IMAGES = 'FETCH_IMAGES';
 	var RECEIVE_IMAGES = exports.RECEIVE_IMAGES = 'RECEIVE_IMAGES';
 	var RERENDER_COLUMNS = exports.RERENDER_COLUMNS = 'RERENDER_COLUMNS';
+	var ADD_IMAGES = exports.ADD_IMAGES = 'ADD_IMAGES';
+	var SET_COLUMN_COUNT = exports.SET_COLUMN_COUNT = 'SET_COLUMN_COUNT';
 
 /***/ },
 /* 201 */
@@ -23167,7 +23204,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.Column = exports.TopBar = exports.Tile = exports.App = undefined;
+	exports.ColumnOuter = exports.Column = exports.TopBar = exports.Tile = exports.App = undefined;
 
 	var _App = __webpack_require__(202);
 
@@ -23185,12 +23222,17 @@
 
 	var _Column2 = _interopRequireDefault(_Column);
 
+	var _ColumnOuter = __webpack_require__(206);
+
+	var _ColumnOuter2 = _interopRequireDefault(_ColumnOuter);
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	exports.App = _App2.default;
 	exports.Tile = _Tile2.default;
 	exports.TopBar = _TopBar2.default;
 	exports.Column = _Column2.default;
+	exports.ColumnOuter = _ColumnOuter2.default;
 
 /***/ },
 /* 202 */
@@ -23257,9 +23299,34 @@
 
 /***/ },
 /* 204 */
-/***/ function(module, exports) {
+/***/ function(module, exports, __webpack_require__) {
 
-	"use strict";
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+	exports.default = TopBar;
+
+	var _react = __webpack_require__(1);
+
+	var _react2 = _interopRequireDefault(_react);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	function TopBar(_ref) {
+		var favoriteCount = _ref.favoriteCount;
+
+		return _react2.default.createElement(
+			'div',
+			null,
+			_react2.default.createElement(
+				'span',
+				{ id: 'favoriteCount' },
+				favoriteCount
+			)
+		);
+	}
 
 /***/ },
 /* 205 */
@@ -23276,28 +23343,791 @@
 
 	var _react2 = _interopRequireDefault(_react);
 
+	var _Tile = __webpack_require__(203);
+
+	var _Tile2 = _interopRequireDefault(_Tile);
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	function Column(_ref) {
 		var images = _ref.images;
 		var onTileClick = _ref.onTileClick;
 
+
 		return _react2.default.createElement(
 			'ul',
 			{ className: 'masonry-column' },
 			images.map(function (image) {
-				return _react2.default.createElement(Tile, {
+				return _react2.default.createElement(_Tile2.default, {
 					key: image.id,
-					imgSrc: image.image_url,
+					imgSrc: image.url,
 					imgName: image.name,
-					viewCount: image.times_viewed,
+					viewCount: image.views,
 					onClick: function onClick(e) {
-						return onTileClick(item);
+						return onTileClick(image);
 					}
 				});
 			})
 		);
 	}
+
+/***/ },
+/* 206 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+	exports.default = ColumnOuter;
+
+	var _react = __webpack_require__(1);
+
+	var _react2 = _interopRequireDefault(_react);
+
+	var _ActiveColumn = __webpack_require__(207);
+
+	var _ActiveColumn2 = _interopRequireDefault(_ActiveColumn);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	function ColumnOuter(_ref) {
+		var columnCount = _ref.columnCount;
+
+		var columns = [];
+		for (var i = 0; i < columnCount; i++) {
+			columns.push(_react2.default.createElement(_ActiveColumn2.default, { key: i, columnId: i }));
+		}
+		return _react2.default.createElement(
+			'div',
+			null,
+			columns
+		);
+	}
+
+/***/ },
+/* 207 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+
+	var _Column = __webpack_require__(205);
+
+	var _Column2 = _interopRequireDefault(_Column);
+
+	var _actions = __webpack_require__(208);
+
+	var _actions2 = _interopRequireDefault(_actions);
+
+	var _reactRedux = __webpack_require__(189);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	var mapStateToProps = function mapStateToProps(state, ownProps) {
+
+		return {
+			images: state.columnState.columnImages[ownProps.columnId].map(function (imageId) {
+				state.imageState.images[imageId].id = imageId;return state.imageState.images[imageId];
+			})
+		};
+	};
+
+	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
+		return {
+			onTileClick: function onTileClick(image) {
+				dispatch((0, _actions2.default)(image));
+			}
+		};
+	};
+
+	var ActiveColumn = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(_Column2.default);
+	exports.default = ActiveColumn;
+
+/***/ },
+/* 208 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+	exports.initializeSDK = initializeSDK;
+	exports.toggleFavorite = toggleFavorite;
+	exports.incrementFavoriteCount = incrementFavoriteCount;
+	exports.decrementFavoriteCount = decrementFavoriteCount;
+	exports.requestImages = requestImages;
+	exports.fetchImages = fetchImages;
+	exports.receiveImages = receiveImages;
+	exports.setColumnCount = setColumnCount;
+	exports.rerenderColumns = rerenderColumns;
+	exports.addImages = addImages;
+
+	var _actionTypes = __webpack_require__(200);
+
+	var _requests = __webpack_require__(209);
+
+	__webpack_require__(210);
+
+	function initializeSDK() {
+		return function (dispatch) {
+			_500px.init({
+				sdk_key: _requests.SDK_KEY
+			});
+
+			_500px.getAuthorizationStatus(function (status) {
+				if (status == 'not_logged_in' || status == 'not_authorized') {
+					_500px.login();
+				}
+			});
+
+			dispatch(fetchImages());
+		};
+	}
+
+	function toggleFavorite(image) {
+		return {
+			type: _actionTypes.TOGGLE_FAVORITE,
+			data: image
+		};
+	}
+
+	function incrementFavoriteCount() {
+		return {
+			type: _actionTypes.INCREMENT_FAVORITE_COUNT
+		};
+	}
+
+	function decrementFavoriteCount() {
+		return {
+			type: _actionTypes.DECREMENT_FAVORITE_COUNT
+		};
+	}
+
+	function requestImages() {
+		return {
+			type: _actionTypes.REQUEST_IMAGES
+		};
+	}
+
+	function fetchImages(pageNum) {
+		return function (dispatch) {
+			dispatch(requestImages());
+			_500px.api('/photos', { feature: _requests.API_FEATURE, page: pageNum }, function (response) {
+				var images = response.data.photos.map(function (image) {
+					return {
+						url: image.image_url,
+						views: image.times_viewed,
+						id: id,
+						heightIndex: image.height / image.width,
+						favorite: false
+					};
+				});
+				dispatch(receiveImages(images));
+				dispatch(addImages(images));
+			});
+		};
+	}
+
+	function receiveImages(images) {
+		return {
+			type: _actionTypes.RECEIVE_IMAGES,
+			data: images
+		};
+	}
+
+	function setColumnCount(columnCount) {
+		return {
+			type: _actionTypes.SET_COLUMN_COUNT,
+			data: columnCount
+		};
+	}
+
+	function rerenderColumns(columnCount) {
+		return {
+			type: _actionTypes.RERENDER_COLUMNS,
+			data: columnCount
+		};
+	}
+
+	function addImages(images) {
+		return {
+			type: _actionTypes.ADD_IMAGES,
+			data: images
+		};
+	}
+
+/***/ },
+/* 209 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	var API_FEATURE = exports.API_FEATURE = 'popular';
+	var SDK_KEY = exports.SDK_KEY = 'f6464424ffcd37fbc0119bfc0119d7b34eaa622b';
+
+/***/ },
+/* 210 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+
+	/*jslint eqeq: true, newcap: true, nomen: true, plusplus: true, browser: true, indent: 2 */
+	(function () {
+	  'use strict';
+
+	  var Response, _500pxSDK;
+
+	  _500pxSDK = function _500pxSDK() {
+	    var self = this,
+	        oauth_token,
+	        container,
+	        site_url = 'https://api.500px.com/',
+	        version = 'v1',
+	        api_url = site_url + version,
+	        events = {},
+	        public_methods,
+	        bind_method,
+	        i,
+	        method_name,
+	        original_method,
+	        random_method_name,
+	        handle_api_callback,
+	        encode_param_name,
+	        object_to_params,
+	        fire_event,
+	        login_callback;
+
+	    // Public methods
+
+	    // init(options)
+	    //
+	    // Initializes the 500px SDK. You must run this command before using the SDK.
+	    // Options are specified as an object. Valid options are:
+	    // - `sdk_key` (required) The sdk key for your application. You can obtain this key from (http://500px.com/settings/applications)
+	    // - `oauth_token` (optional) An oauth token for the current user. If you use `ensureAuthorization`, `login`, `authorization` or `getAuthorizationStatus` this value may be overwritten.
+	    //
+	    //    _500px.init({
+	    //      sdk_key: 'XXXXXXXXXXXXXXXXXXXXXX',
+	    //    });
+	    this.init = function (options) {
+	      if (this.sdk_key) {
+	        throw 'init: Already initialized';
+	      }
+	      if (!options || !options.sdk_key) {
+	        throw 'init: You must specify an sdk key';
+	      }
+	      if (!document.body) {
+	        throw 'init: Could not find the body element, make sure the document is loaded before calling init';
+	      }
+
+	      this.sdk_key = options.sdk_key;
+
+	      if (options && options.oauth_token) {
+	        oauth_token = options.oauth_token;
+	      }
+
+	      var container_element = document.createElement('div'),
+	          remove_container;
+	      container_element.id = '_500px_container';
+	      container_element.style.display = 'none';
+	      container_element.style.width = 0;
+	      container_element.style.height = 0;
+	      container_element.style.border = 0;
+	      container_element.style.margin = 0;
+	      container_element.style.padding = 0;
+	      document.body.appendChild(container_element);
+
+	      container = document.getElementById('_500px_container');
+
+	      remove_container = function remove_container() {
+	        var e = document.getElementById('_500px_container');
+	        document.body.removeChild(e);
+	        return null;
+	      };
+	    };
+
+	    // api(url, http_method, parameters, callback)
+	    //
+	    // Executes an API call. All parameters are optional except `url`. `parameters` must be an object and `callback` a function.
+	    // The callback will be passed a Response object. The response object has these methods:
+	    //
+	    //    `success` (boolean) True if no errors occurred, false if errors occured.
+	    //    `error` (boolean) True if an error occured.
+	    //    `error_message` (string) The text of the error message.
+	    //    `status` (integer) The HTTP status code of the response.
+	    //    `data` (object) The data returned by the API.
+	    //
+	    //    _500px.api('/users', function (response) {
+	    //      console.log('My User Data Is', response.data);
+	    //    });
+	    //
+	    //    _500px.api('/users/937847/friend', 'post', function (response) {
+	    //      console.log('Now following user ', 937847);
+	    //    });
+	    //
+	    //    _500px.api('/photos/899999', 'put', { name: 'My New Photo Name' }, function (response) {
+	    //      if (response.success) {
+	    //        console.log('Your photo was updated');
+	    //      } else {
+	    //        console.log('An Error occurred: ', response.error_message);
+	    //      }
+	    //    });
+	    this.api = function () {
+	      if (!this.sdk_key) {
+	        throw "api: SDK not initialized. Use _500px.init() first.";
+	      }
+	      var args, url, method, data, callback, tag, callback_function_name, tag_src;
+	      args = Array.prototype.slice.call(arguments); // This converts arguments into an Array
+	      url = args.shift();
+	      if (!url || url.replace(/^\s*/, '').replace(/\s*$/, '') == '') {
+	        throw 'api: You must specify an end point';
+	      }
+
+	      method = 'get';
+	      if (args[0] && typeof args[0] == 'string') {
+	        method = args.shift();
+	      }
+
+	      data = {};
+	      if (args[0] && _typeof(args[0]) == 'object') {
+	        data = args.shift();
+	      }
+
+	      callback = function callback() {};
+	      if (args[0] && typeof args[0] == 'function') {
+	        callback = args.shift();
+	      }
+
+	      data._method = method;
+	      if (oauth_token) {
+	        data.oauth_token = oauth_token;
+	      }
+	      data.sdk_key = this.sdk_key;
+
+	      // Construct JSONP request
+	      tag = document.createElement('script');
+
+	      callback_function_name = random_method_name();
+
+	      window[callback_function_name] = function (data) {
+	        document.body.removeChild(tag);
+	        handle_api_callback(callback)(data);
+	      };
+
+	      tag_src = api_url + url + '.jsonp';
+	      data.callback = callback_function_name;
+	      tag_src += '?';
+	      tag_src += object_to_params(data);
+	      tag.src = tag_src;
+	      document.body.appendChild(tag);
+	    };
+
+	    // login([callback])
+	    //
+	    // Logs a user in and authorizes your application. You may specify an optional callback function.
+	    // The callback function will be passed a string. It will be `denied` if the user did not authorize the application and `authorized` if the user accepted.
+	    // If the user does authorize the application an `authorization_obtained` event will be triggered.
+	    //
+	    // Once authorized an oauth token is obtain for the user. When making api requests you will not be logged in as that user.
+	    //
+	    //    _500px.login();
+	    //
+	    //    _500px.login(function (resposne) {
+	    //      if (response == 'denied') {
+	    //        console.log('User did not authorize the app');
+	    //      } elsif (response == 'authorized') {
+	    //        console.log('User did authorize the app');
+	    //      }
+	    //    });
+	    this.login = function (callback) {
+	      if (!this.sdk_key) {
+	        throw "login: SDK not initialized. Use _500px.init() first.";
+	      }
+
+	      var callback_function_name, left_offset, top_offset;
+
+	      callback_function_name = random_method_name();
+	      window[callback_function_name] = function (parameters) {
+	        login_callback.call(self, callback, parameters);
+	      };
+
+	      left_offset = screen.width / 2 - 1240 / 2;
+	      top_offset = screen.height / 2 - 480 / 2;
+
+	      window.open(site_url + 'api/js-sdk/authorize?sdk_key=' + this.sdk_key + '&callback=' + callback_function_name, '500px_js_sdk_login', 'width=1240,height=480,left=' + left_offset + ',top=' + top_offset + ',menu=no,location=yes,scrollbars=no,status=no,toolbar=no');
+	    };
+
+	    // authorize(callback)
+	    //
+	    // Alias for `login`.
+	    this.authorize = function (callback) {
+	      if (!this.sdk_key) {
+	        throw "authorize: SDK not initialized. Use _500px.init() first.";
+	      }
+	      this.login(callback);
+	    };
+
+	    // ensureAuthorization(callback)
+	    //
+	    // Executes callback only if authorization for the user can be obtained.
+	    // If authorization was previously obtained and an oauth token is present
+	    // the callback will be executed immediately. Otherwise `getAuthorizationStatus`
+	    // is used to check if the user has authorized the application & authorizes it if they haven't.
+	    // If the user declines to authorize the app, or closes the authorization popup the callback will not be called.
+	    this.ensureAuthorization = function (callback) {
+	      if (!this.sdk_key) {
+	        throw "ensureAuthorization: SDK not initialized. Use _500px.init() first.";
+	      }
+
+	      var bound_callback = function bound_callback() {
+	        if (callback) {
+	          callback.call(self);
+	        }
+	      };
+
+	      if (oauth_token) {
+	        bound_callback();
+	        return;
+	      }
+
+	      this.getAuthorizationStatus(function (response) {
+	        if (response == 'authorized') {
+	          bound_callback();
+	        } else {
+	          self.login(function (response) {
+	            if (response == 'authorized') {
+	              bound_callback();
+	            }
+	          });
+	        }
+	      });
+	    };
+
+	    // getAuthorizationStatus([callback])
+	    //
+	    // Determines whether or not the user has authorized your application. If the user has authorized the application it will return and save the user's oauth token.
+	    // The callback function will be passed a string. Possible values are:
+	    //    `not_logged_in` The user is not logged in to 500px.
+	    //    `not_authorized` The user is logged in, but has not authorized your app.
+	    //    `authorized` The user has authorized your app.
+	    //
+	    //    _500px.getAuthorizationStatus(function (response) {
+	    //      if (response != 'authorized') {
+	    //        _500px.login();
+	    //      }
+	    //    });
+	    this.getAuthorizationStatus = function (callback) {
+	      if (!this.sdk_key) {
+	        throw "getAuthorizationStatus: SDK not initialized. Use _500px.init() first.";
+	      }
+
+	      var callback_function_name = random_method_name(),
+	          iframe_element = document.createElement('iframe');
+
+	      window[callback_function_name] = function (parameters) {
+	        setTimeout(function () {
+	          container.removeChild(iframe_element);
+	        }, 0);
+
+	        if (parameters.not_logged_in) {
+	          oauth_token = null;
+	          if (callback && typeof callback == 'function') {
+	            callback('not_logged_in');
+	          }
+	        } else if (parameters.not_authorized) {
+	          oauth_token = null;
+	          if (callback && typeof callback == 'function') {
+	            callback('not_authorized');
+	          }
+	        } else if (parameters.token) {
+	          oauth_token = parameters.token;
+	          fire_event('authorization_obtained');
+	          if (callback && typeof callback == 'function') {
+	            callback('authorized');
+	          }
+	        }
+	      };
+
+	      iframe_element.src = site_url + 'api/js-sdk/check_authorization?sdk_key=' + this.sdk_key + '&callback=' + callback_function_name;
+	      container.appendChild(iframe_element);
+	    };
+
+	    // on(event_name, callback)
+	    //
+	    // Subscribe to an event
+	    //    `logout` Fired when the user logs out, or if the API returns an OAuth error (like oauth_token is invalid)
+	    //    `authorization_obtained` Fired when the SDK obtains an oauth token for a user. For example with `login()` is used, or `getAuthorizationStatus()` returns an `authorized` value.
+	    //    'authorization_denied' Fired when the user denies authorization for your application.
+	    this.on = function (event_name, callback) {
+	      if (!events[event_name]) {
+	        events[event_name] = [];
+	      }
+	      if (typeof callback != 'function') {
+	        throw 'on: Callback is not a function';
+	      }
+
+	      events[event_name].push(callback);
+	    };
+
+	    // off(event_name[, callback])
+	    //
+	    // Unsubscribed from an event. Specify the callback to remove just one funcgtion. Specify no callback to remove all callbacks for an event.
+	    this.off = function (event_name, callback) {
+	      var i, current_callback;
+	      if (callback) {
+	        if (!events[event_name]) {
+	          return;
+	        }
+	        for (i = 0; i < events[event_name].length; i++) {
+	          current_callback = events[event_name][i];
+	          if (current_callback == callback) {
+	            events[event_name][i] = undefined;
+	          }
+	        }
+	      } else {
+	        events[event_name] = [];
+	      }
+	    };
+
+	    // logout
+	    //
+	    // Logs the user out from 500px
+	    this.logout = function (callback) {
+	      if (!this.sdk_key) {
+	        throw "logout: SDK not initialized. Use _500px.init() first.";
+	      }
+	      if (!oauth_token) {
+	        throw "logout: User is not logged in";
+	      }
+
+	      var callback_function_name = random_method_name(),
+	          iframe_element = document.createElement('iframe'),
+	          left_offset,
+	          top_offset;
+
+	      window[callback_function_name] = function (parameters) {
+	        var status;
+
+	        setTimeout(function () {
+	          container.removeChild(iframe_element);
+	        }, 0);
+	        if (parameters.no_token_specified) {
+	          status = 'no_token_specified';
+	        } else if (parameters.invalid_token) {
+	          status = 'invalid_token';
+	        } else if (parameters.not_logged_in) {
+	          status = 'not_logged_in';
+	        } else if (parameters.logged_out) {
+	          status = 'logged_out';
+	        }
+	        if (callback && typeof callback == 'function') {
+	          callback(status);
+	        }
+	        fire_event('logout');
+	      };
+
+	      if (navigator.userAgent.match(/MSIE/)) {
+	        left_offset = screen.width / 2 - 1240 / 2;
+	        top_offset = screen.height / 2 - 480 / 2;
+
+	        window.open(site_url + 'api/js-sdk/authorize?sdk_key=' + this.sdk_key + '&token=' + oauth_token + '&_method=delete&callback=' + callback_function_name, '500px_logout_window', 'width=1240,height=480,left=' + left_offset + ',top=' + top_offset + ',menu=no,location=yes,scrollbars=no,status=yes,toolbar=yes');
+	      } else {
+	        iframe_element.src = site_url + 'api/js-sdk/authorize?sdk_key=' + this.sdk_key + '&token=' + oauth_token + '&_method=delete&callback=' + callback_function_name;
+	      }
+	      container.appendChild(iframe_element);
+	    };
+
+	    // Private methods
+
+	    function encode_param_name(name, root) {
+	      if (root) {
+	        return encodeURIComponent(root + '[' + name + ']');
+	      } else {
+	        return encodeURIComponent(name);
+	      }
+	    };
+
+	    function object_to_params(object, root) {
+	      var string_parts = [],
+	          property,
+	          i;
+
+	      for (property in object) {
+	        if (object.hasOwnProperty(property)) {
+	          var value = object[property];
+	          if (value instanceof Array) {
+	            for (i = 0; i < value.length; i++) {
+	              var encoded_value = encodeURIComponent(value[i]);
+	              string_parts.push(encode_param_name(property, root) + '%5B%5D=' + encoded_value);
+	            }
+	          } else if ((typeof value === 'undefined' ? 'undefined' : _typeof(value)) == 'object') {
+	            string_parts.push(this.object_to_params(value, encode_param_name(property, root)));
+	          } else {
+	            string_parts.push(encode_param_name(property, root) + '=' + encodeURIComponent(value));
+	          }
+	        }
+	      }
+	      return string_parts.join('&');
+	    };
+
+	    fire_event = function fire_event(event_name) {
+	      if (events[event_name]) {
+	        var i;
+	        for (i = 0; i < events[event_name].length; i++) {
+	          events[event_name][i].call(self);
+	        }
+	      }
+	    };
+
+	    login_callback = function login_callback(callback, parameters) {
+	      if (parameters.denied && callback && typeof callback == 'function') {
+	        fire_event('authorization_cancelled');
+	        callback.call(self, 'denied');
+	      } else if (parameters.token) {
+	        oauth_token = parameters.token;
+	        fire_event('authorization_obtained');
+	        if (callback && typeof callback == 'function') {
+	          callback.call(self, 'authorized');
+	        }
+	      }
+	    };
+
+	    handle_api_callback = function handle_api_callback(callback) {
+	      return function (data) {
+	        var response = new Response(data);
+	        callback.call(self, response);
+	        if (data.status && data.status == 401) {
+	          oauth_token = null;
+	          fire_event('logout');
+	        }
+	      };
+	    };
+
+	    random_method_name = function random_method_name() {
+	      return '_500pxCallback' + String(Math.round(Math.random() * 100000000));
+	    };
+
+	    // Bind all public methods
+
+	    public_methods = ['init', 'api', 'login', 'authorize', 'ensureAuthorization', 'getAuthorizationStatus', 'on', 'off', 'logout'];
+
+	    bind_method = function bind_method(method) {
+	      return function () {
+	        method.apply(self, arguments);
+	      };
+	    };
+
+	    for (i = 0; i < public_methods.length; i++) {
+	      method_name = public_methods[i];
+	      original_method = this[method_name];
+	      this[method_name] = bind_method(original_method);
+	    }
+	  };
+
+	  window._500px = new _500pxSDK();
+
+	  Response = function Response(data) {
+	    this.success = true;
+
+	    if (data.status && data.status != 200 && data.error) {
+	      this.success = false;
+	      this.error_message = data.error;
+	      this.status = data.status;
+	    }
+	    if (!this.status) {
+	      this.status = 200;
+	    }
+
+	    this.error = !this.success;
+	    this.data = data;
+	  };
+	})();
+
+/***/ },
+/* 211 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	exports.ColumnOuterContainer = exports.ActiveColumn = exports.TileContainer = undefined;
+
+	var _TileContainer = __webpack_require__(212);
+
+	var _TileContainer2 = _interopRequireDefault(_TileContainer);
+
+	var _ActiveColumn = __webpack_require__(207);
+
+	var _ActiveColumn2 = _interopRequireDefault(_ActiveColumn);
+
+	var _ColumnOuterContainer = __webpack_require__(213);
+
+	var _ColumnOuterContainer2 = _interopRequireDefault(_ColumnOuterContainer);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	exports.TileContainer = _TileContainer2.default;
+	exports.ActiveColumn = _ActiveColumn2.default;
+	exports.ColumnOuterContainer = _ColumnOuterContainer2.default;
+
+/***/ },
+/* 212 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	var _reactRedux = __webpack_require__(189);
+
+/***/ },
+/* 213 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+
+	var _ColumnOuter = __webpack_require__(206);
+
+	var _ColumnOuter2 = _interopRequireDefault(_ColumnOuter);
+
+	var _actions = __webpack_require__(208);
+
+	var _actions2 = _interopRequireDefault(_actions);
+
+	var _reactRedux = __webpack_require__(189);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	var mapStateToProps = function mapStateToProps(state) {
+
+		return {
+			columnCount: state.columnState.columnCount
+		};
+	};
+
+	var ColumnOuterContainer = (0, _reactRedux.connect)(mapStateToProps)(_ColumnOuter2.default);
+	exports.default = ColumnOuterContainer;
+
+/***/ },
+/* 214 */
+/***/ function(module, exports) {
+
+	// removed by extract-text-webpack-plugin
 
 /***/ }
 /******/ ]);

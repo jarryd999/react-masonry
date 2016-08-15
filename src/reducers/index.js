@@ -72,7 +72,6 @@ export function columnState(state = INITIAL_COLUMNS, action) {
 				newState.columnImages[smallestColumn.columnId].push(index);
 				newState.columnHeights[smallestColumn.columnId] = parseFloat(newState.columnHeights[smallestColumn.columnId]) + parseFloat(image.heightIndex);
 			}
-
 			return newState
 
 		case SET_COLUMN_COUNT:

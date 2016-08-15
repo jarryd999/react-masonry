@@ -3,7 +3,7 @@ import { toggleFavorite, incrementFavoriteCount, decrementFavoriteCount } from '
 import { connect } from 'react-redux';
 
 const mapStateToProps = (state, ownProps) => {
-
+	console.log(ownProps);
 	return {
 		images: state.columnState.columnImages[ownProps.columnId].map( imageId => {state.imageState.images[imageId].id = imageId; return state.imageState.images[imageId]} )
 	}

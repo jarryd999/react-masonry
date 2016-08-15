@@ -16,7 +16,9 @@ export default class Tile extends React.Component {
 			<li className={className} onClick={e => this.props.onClick(e)}>
 				<img src={this.props.imgSrc} width='100%' onLoad={
 					() => this.setState({ loaded: true })}/>
-				<span>Views: {this.props.viewCount}</span>
+				<div className='overlay'>Views: {this.props.viewCount}
+					<div>Click to toggle favorite</div>
+				</div>
 			</li>
 		)
 	}

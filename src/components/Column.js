@@ -9,9 +9,9 @@ export default function Column({images, onTileClick}) {
 				<Tile
 					key={image.id}
 					imgSrc={image.url}
-					imgName={image.name}
+					favorite={image.favorite}
 					viewCount={image.views}
-					onClick={e => onTileClick(item)}
+					onClick={e => onTileClick(image)}
 				/>
 			)}
 		</ul>
